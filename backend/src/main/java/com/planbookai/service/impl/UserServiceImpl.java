@@ -9,12 +9,14 @@ import com.planbookai.repository.RoleRepository;
 import com.planbookai.repository.UserRepository;
 import com.planbookai.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -33,7 +35,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public UserResponse findById(Long userId) {
+    public UserResponse findById(@NonNull Long userId) {
         return toResponse(getUser(userId));
     }
 
@@ -58,7 +60,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponse update(Long userId, UserUpdateRequest request) {
+    public UserResponse update(@NonNull Long userId, UserUpdateRequest request) {
         User user = getUser(userId);
         user.setFullName(request.getFullName());
         user.setStatus(request.getStatus());
@@ -69,14 +71,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void delete(Long userId) {
+    public void delete(@NonNull Long userId) {
         User user = getUser(userId);
         userRepository.delete(user);
     }
 
-    private User getUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+    private @NonNull User getUser(@NonNull Long userId) {
+        return Objects.requireNonNull(
+                userRepository.findById(userId)
+                        .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId))
+        );
     }
 
     private Set<Role> resolveRoles(Set<String> roleNames) {
