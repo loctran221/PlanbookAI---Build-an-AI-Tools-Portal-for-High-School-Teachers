@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,7 +35,7 @@ public class OrderController {
 
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
-    public OrderResponse updateStatus(@PathVariable Long id, @Valid @RequestBody OrderStatusUpdateRequest request) {
+    public OrderResponse updateStatus(@PathVariable @NonNull Long id, @Valid @RequestBody OrderStatusUpdateRequest request) {
         return orderService.updateStatus(id, request);
     }
 }

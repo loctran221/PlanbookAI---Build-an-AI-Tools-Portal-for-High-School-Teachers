@@ -9,11 +9,13 @@ import com.planbookai.repository.UserRepository;
 import com.planbookai.security.CurrentUserService;
 import com.planbookai.service.LessonPlanTemplateService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +28,7 @@ public class LessonPlanTemplateServiceImpl implements LessonPlanTemplateService 
     @Override
     @Transactional
     public LessonPlanTemplateResponse create(LessonPlanTemplateRequest request) {
-        Long currentUserId = currentUserService.requireUserId();
+        Long currentUserId = Objects.requireNonNull(currentUserService.requireUserId());
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + currentUserId));
         LessonPlanTemplate template = new LessonPlanTemplate();
@@ -46,9 +48,8 @@ public class LessonPlanTemplateServiceImpl implements LessonPlanTemplateService 
 
     @Override
     @Transactional
-    public LessonPlanTemplateResponse update(Long id, LessonPlanTemplateRequest request) {
-        LessonPlanTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
+    public LessonPlanTemplateResponse update(@NonNull Long id, LessonPlanTemplateRequest request) {
+        LessonPlanTemplate template = getTemplate(id);
         template.setTitle(request.getTitle());
         template.setStructureJson(request.getStructureJson());
         template.setStatus(request.getStatus());
@@ -57,10 +58,16 @@ public class LessonPlanTemplateServiceImpl implements LessonPlanTemplateService 
 
     @Override
     @Transactional
-    public void delete(Long id) {
-        LessonPlanTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
+    public void delete(@NonNull Long id) {
+        LessonPlanTemplate template = getTemplate(id);
         templateRepository.delete(template);
+    }
+
+    private @NonNull LessonPlanTemplate getTemplate(@NonNull Long id) {
+        return Objects.requireNonNull(
+                templateRepository.findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id))
+        );
     }
 
     private LessonPlanTemplateResponse toResponse(LessonPlanTemplate template) {

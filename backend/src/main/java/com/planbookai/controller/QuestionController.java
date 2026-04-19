@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,7 +40,7 @@ public class QuestionController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('TEACHER','STAFF','MANAGER','ADMIN')")
-    public ResponseEntity<QuestionResponse> get(@PathVariable("id") Long id) {
+    public ResponseEntity<QuestionResponse> get(@PathVariable("id") @NonNull Long id) {
         return questionService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -54,13 +55,13 @@ public class QuestionController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
-    public QuestionResponse update(@PathVariable Long id, @Valid @RequestBody QuestionUpdateRequest body) {
+    public QuestionResponse update(@PathVariable @NonNull Long id, @Valid @RequestBody QuestionUpdateRequest body) {
         return questionService.update(id, body);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @NonNull Long id) {
         questionService.delete(id);
         return ResponseEntity.noContent().build();
     }

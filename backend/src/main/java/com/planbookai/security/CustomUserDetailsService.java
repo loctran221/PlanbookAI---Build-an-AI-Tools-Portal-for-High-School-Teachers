@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -29,10 +30,10 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .collect(Collectors.toSet());
 
         return new AuthenticatedUser(
-                user.getUserId(),
-                user.getEmail(),
-                user.getFullName(),
-                user.getPasswordHash(),
+                Objects.requireNonNull(user.getUserId(), "user id must not be null"),
+                Objects.requireNonNull(user.getEmail(), "email must not be null"),
+                Objects.requireNonNull(user.getFullName(), "full name must not be null"),
+                Objects.requireNonNull(user.getPasswordHash(), "password hash must not be null"),
                 authorities
         );
     }

@@ -10,12 +10,14 @@ import com.planbookai.repository.UserRepository;
 import com.planbookai.security.CurrentUserService;
 import com.planbookai.service.ExamService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -75,7 +77,7 @@ public class ExamServiceImpl implements ExamService {
 
     @Override
     @Transactional(readOnly = true)
-    public ExamResponse getById(Long examId) {
+    public ExamResponse getById(@NonNull Long examId) {
         Exam exam = getExam(examId);
         ensureOwnerOrAdmin(exam);
         return toResponse(exam);
@@ -83,18 +85,20 @@ public class ExamServiceImpl implements ExamService {
 
     @Override
     @Transactional
-    public void delete(Long examId) {
+    public void delete(@NonNull Long examId) {
         Exam exam = getExam(examId);
         ensureOwnerOrAdmin(exam);
         examRepository.delete(exam);
     }
 
-    private Exam getExam(Long examId) {
-        return examRepository.findById(examId)
-                .orElseThrow(() -> new IllegalArgumentException("Exam not found: " + examId));
+    private @NonNull Exam getExam(@NonNull Long examId) {
+        return Objects.requireNonNull(
+                examRepository.findById(examId)
+                        .orElseThrow(() -> new IllegalArgumentException("Exam not found: " + examId))
+        );
     }
 
-    private void ensureOwnerOrAdmin(Exam exam) {
+    private void ensureOwnerOrAdmin(@NonNull Exam exam) {
         if (currentUserService.hasRole("ADMIN")) {
             return;
         }

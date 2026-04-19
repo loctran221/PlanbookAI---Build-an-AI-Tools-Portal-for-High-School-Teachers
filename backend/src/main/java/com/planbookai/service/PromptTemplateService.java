@@ -2,6 +2,7 @@ package com.planbookai.service;
 
 import com.planbookai.dto.prompt.PromptTemplateRequest;
 import com.planbookai.dto.prompt.PromptTemplateResponse;
+import org.springframework.lang.NonNull;
 
 import java.util.List;
 
@@ -10,7 +11,7 @@ public interface PromptTemplateService {
 
     List<PromptTemplateResponse> findAll();
 
-    PromptTemplateResponse update(Long id, PromptTemplateRequest request);
+    PromptTemplateResponse update(@NonNull Long id, PromptTemplateRequest request);
 
-    void delete(Long id);
+    void delete(@NonNull Long id);
 }

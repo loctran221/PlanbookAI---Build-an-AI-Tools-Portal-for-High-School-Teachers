@@ -2,6 +2,7 @@ package com.planbookai.service;
 
 import com.planbookai.dto.lessonplan.LessonPlanRequest;
 import com.planbookai.dto.lessonplan.LessonPlanResponse;
+import org.springframework.lang.NonNull;
 
 import java.util.List;
 
@@ -10,9 +11,9 @@ public interface LessonPlanService {
 
     List<LessonPlanResponse> listMine();
 
-    LessonPlanResponse getById(Long lessonPlanId);
+    LessonPlanResponse getById(@NonNull Long lessonPlanId);
 
-    LessonPlanResponse update(Long lessonPlanId, LessonPlanRequest request);
+    LessonPlanResponse update(@NonNull Long lessonPlanId, LessonPlanRequest request);
 
-    void delete(Long lessonPlanId);
+    void delete(@NonNull Long lessonPlanId);
 }

@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,17 +32,17 @@ public class LessonPlanController {
     }
 
     @GetMapping("/{id}")
-    public LessonPlanResponse get(@PathVariable Long id) {
+    public LessonPlanResponse get(@PathVariable @NonNull Long id) {
         return lessonPlanService.getById(id);
     }
 
     @PutMapping("/{id}")
-    public LessonPlanResponse update(@PathVariable Long id, @Valid @RequestBody LessonPlanRequest request) {
+    public LessonPlanResponse update(@PathVariable @NonNull Long id, @Valid @RequestBody LessonPlanRequest request) {
         return lessonPlanService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @NonNull Long id) {
         lessonPlanService.delete(id);
         return ResponseEntity.noContent().build();
     }

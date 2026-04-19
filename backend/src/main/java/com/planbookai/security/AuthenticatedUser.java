@@ -2,6 +2,7 @@ package com.planbookai.security;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -11,7 +12,7 @@ import java.util.Collection;
 @RequiredArgsConstructor
 public class AuthenticatedUser implements UserDetails {
 
-    private final Long id;
+    private final @NonNull Long id;
     private final String email;
     private final String fullName;
     private final String password;

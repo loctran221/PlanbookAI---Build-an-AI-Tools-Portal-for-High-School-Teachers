@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,12 +32,12 @@ public class ExamController {
     }
 
     @GetMapping("/{id}")
-    public ExamResponse get(@PathVariable Long id) {
+    public ExamResponse get(@PathVariable @NonNull Long id) {
         return examService.getById(id);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @NonNull Long id) {
         examService.delete(id);
         return ResponseEntity.noContent().build();
     }

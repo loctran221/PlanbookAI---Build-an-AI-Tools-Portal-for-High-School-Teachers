@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,7 +27,7 @@ public class OcrController {
     }
 
     @GetMapping("/exam/{examId}")
-    public List<OcrResultResponse> byExam(@PathVariable Long examId) {
+    public List<OcrResultResponse> byExam(@PathVariable @NonNull Long examId) {
         return ocrService.findByExam(examId);
     }
 }

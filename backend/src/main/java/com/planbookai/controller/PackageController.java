@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,13 +34,13 @@ public class PackageController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
-    public PackageResponse update(@PathVariable Long id, @Valid @RequestBody PackageRequest request) {
+    public PackageResponse update(@PathVariable @NonNull Long id, @Valid @RequestBody PackageRequest request) {
         return packageService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @NonNull Long id) {
         packageService.delete(id);
         return ResponseEntity.noContent().build();
     }

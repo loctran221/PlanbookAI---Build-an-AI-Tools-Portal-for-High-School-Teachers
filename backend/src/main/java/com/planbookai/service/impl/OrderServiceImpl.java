@@ -13,12 +13,14 @@ import com.planbookai.repository.UserRepository;
 import com.planbookai.security.CurrentUserService;
 import com.planbookai.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -32,11 +34,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse create(OrderCreateRequest request) {
-        Long currentUserId = currentUserService.requireUserId();
+        Long currentUserId = Objects.requireNonNull(currentUserService.requireUserId());
+        Long packageId = Objects.requireNonNull(request.getPackageId(), "packageId is required");
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + currentUserId));
-        SubscriptionPackage pack = packageRepository.findById(request.getPackageId())
-                .orElseThrow(() -> new IllegalArgumentException("Package not found: " + request.getPackageId()));
+        SubscriptionPackage pack = packageRepository.findById(packageId)
+                .orElseThrow(() -> new IllegalArgumentException("Package not found: " + packageId));
 
         UserOrder order = new UserOrder();
         order.setUser(user);
@@ -54,16 +57,25 @@ public class OrderServiceImpl implements OrderService {
         if (currentUserService.hasRole("ADMIN") || currentUserService.hasRole("MANAGER")) {
             return orderRepository.findAll().stream().map(this::toResponse).toList();
         }
-        return orderRepository.findByUser_UserId(currentUserService.requireUserId()).stream().map(this::toResponse).toList();
+        return orderRepository.findByUser_UserId(Objects.requireNonNull(currentUserService.requireUserId()))
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Override
     @Transactional
-    public OrderResponse updateStatus(Long orderId, OrderStatusUpdateRequest request) {
-        UserOrder order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
-        order.setStatus(request.getStatus());
+    public OrderResponse updateStatus(@NonNull Long orderId, OrderStatusUpdateRequest request) {
+        UserOrder order = getOrder(orderId);
+        order.setStatus(Objects.requireNonNull(request.getStatus(), "status is required"));
         return toResponse(orderRepository.save(order));
+    }
+
+    private @NonNull UserOrder getOrder(@NonNull Long orderId) {
+        return Objects.requireNonNull(
+                orderRepository.findById(orderId)
+                        .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId))
+        );
     }
 
     private OrderResponse toResponse(UserOrder order) {

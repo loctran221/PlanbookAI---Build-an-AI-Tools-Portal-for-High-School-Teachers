@@ -6,11 +6,13 @@ import com.planbookai.entity.SubscriptionPackage;
 import com.planbookai.repository.SubscriptionPackageRepository;
 import com.planbookai.service.PackageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -38,7 +40,7 @@ public class PackageServiceImpl implements PackageService {
 
     @Override
     @Transactional
-    public PackageResponse update(Long packageId, PackageRequest request) {
+    public PackageResponse update(@NonNull Long packageId, PackageRequest request) {
         SubscriptionPackage entity = getPackage(packageId);
         entity.setName(request.getName());
         entity.setPrice(request.getPrice());
@@ -49,13 +51,15 @@ public class PackageServiceImpl implements PackageService {
 
     @Override
     @Transactional
-    public void delete(Long packageId) {
+    public void delete(@NonNull Long packageId) {
         packageRepository.delete(getPackage(packageId));
     }
 
-    private SubscriptionPackage getPackage(Long packageId) {
-        return packageRepository.findById(packageId)
-                .orElseThrow(() -> new IllegalArgumentException("Package not found: " + packageId));
+    private @NonNull SubscriptionPackage getPackage(@NonNull Long packageId) {
+        return Objects.requireNonNull(
+                packageRepository.findById(packageId)
+                        .orElseThrow(() -> new IllegalArgumentException("Package not found: " + packageId))
+        );
     }
 
     private PackageResponse toResponse(SubscriptionPackage entity) {

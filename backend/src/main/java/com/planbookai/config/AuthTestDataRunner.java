@@ -7,11 +7,13 @@ import com.planbookai.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 /**
  * Seeds a fixed test account for local auth testing (idempotent).
@@ -31,10 +33,17 @@ public class AuthTestDataRunner implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        Role teacherRole = roleRepository.findByName(TEACHER_ROLE_NAME)
-                .orElseGet(() -> roleRepository.save(createRole(TEACHER_ROLE_NAME)));
+        Optional<Role> existingRole = roleRepository.findByName(TEACHER_ROLE_NAME);
+        Role teacherRole;
+        if (existingRole.isPresent()) {
+            teacherRole = existingRole.get();
+        } else {
+            Role toPersist = createRole(TEACHER_ROLE_NAME);
+            teacherRole = roleRepository.save(toPersist);
+        }
 
-        User user = userRepository.findByEmail(TEST_EMAIL).orElseGet(User::new);
+        Optional<User> existingUser = userRepository.findByEmail(TEST_EMAIL);
+        User user = existingUser.orElseGet(User::new);
         boolean isNew = user.getUserId() == null;
 
         if (isNew) {
@@ -50,7 +59,7 @@ public class AuthTestDataRunner implements ApplicationRunner {
         userRepository.save(user);
     }
 
-    private static Role createRole(String name) {
+    private static @NonNull Role createRole(String name) {
         Role role = new Role();
         role.setName(name);
         return role;

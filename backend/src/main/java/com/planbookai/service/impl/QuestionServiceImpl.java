@@ -17,11 +17,13 @@ import com.planbookai.repository.UserRepository;
 import com.planbookai.security.CurrentUserService;
 import com.planbookai.service.QuestionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -41,15 +43,16 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<QuestionResponse> findById(Long questionId) {
+    public Optional<QuestionResponse> findById(@NonNull Long questionId) {
         return questionRepository.findById(questionId).map(this::toResponse);
     }
 
     @Override
     @Transactional
     public QuestionResponse create(QuestionCreateRequest request) {
-        Topic topic = topicRepository.findById(request.getTopicId())
-                .orElseThrow(() -> new IllegalArgumentException("Topic not found: " + request.getTopicId()));
+        Long topicId = Objects.requireNonNull(request.getTopicId(), "topicId is required");
+        Topic topic = topicRepository.findById(topicId)
+                .orElseThrow(() -> new IllegalArgumentException("Topic not found: " + topicId));
         Long currentUserId = currentUserService.requireUserId();
         User author = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + currentUserId));
@@ -79,13 +82,13 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     @Transactional
-    public QuestionResponse update(Long questionId, QuestionUpdateRequest request) {
-        Question question = questionRepository.findById(questionId)
-                .orElseThrow(() -> new IllegalArgumentException("Question not found: " + questionId));
+    public QuestionResponse update(@NonNull Long questionId, QuestionUpdateRequest request) {
+        Question question = getQuestion(questionId);
         ensureOwnerOrAdmin(question);
 
-        Topic topic = topicRepository.findById(request.getTopicId())
-                .orElseThrow(() -> new IllegalArgumentException("Topic not found: " + request.getTopicId()));
+        Long topicId = Objects.requireNonNull(request.getTopicId(), "topicId is required");
+        Topic topic = topicRepository.findById(topicId)
+                .orElseThrow(() -> new IllegalArgumentException("Topic not found: " + topicId));
         validateChoicesForType(request.getType(), request.getChoices());
 
         question.setTopic(topic);
@@ -107,11 +110,17 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     @Transactional
-    public void delete(Long questionId) {
-        Question question = questionRepository.findById(questionId)
-                .orElseThrow(() -> new IllegalArgumentException("Question not found: " + questionId));
+    public void delete(@NonNull Long questionId) {
+        Question question = getQuestion(questionId);
         ensureOwnerOrAdmin(question);
         questionRepository.delete(question);
+    }
+
+    private @NonNull Question getQuestion(@NonNull Long questionId) {
+        return Objects.requireNonNull(
+                questionRepository.findById(questionId)
+                        .orElseThrow(() -> new IllegalArgumentException("Question not found: " + questionId))
+        );
     }
 
     @Override

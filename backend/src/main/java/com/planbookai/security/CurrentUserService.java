@@ -1,5 +1,6 @@
 package com.planbookai.security;
 
+import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ public class CurrentUserService {
         return user;
     }
 
+    @NonNull
     public Long requireUserId() {
         return requireAuthenticatedUser().getId();
     }

@@ -9,11 +9,13 @@ import com.planbookai.repository.UserRepository;
 import com.planbookai.security.CurrentUserService;
 import com.planbookai.service.PromptTemplateService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -46,9 +48,8 @@ public class PromptTemplateServiceImpl implements PromptTemplateService {
 
     @Override
     @Transactional
-    public PromptTemplateResponse update(Long id, PromptTemplateRequest request) {
-        PromptTemplate entity = promptTemplateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Prompt template not found: " + id));
+    public PromptTemplateResponse update(@NonNull Long id, PromptTemplateRequest request) {
+        PromptTemplate entity = getPromptTemplate(id);
         ensureOwnerOrAdmin(entity);
         entity.setTitle(request.getTitle());
         entity.setContent(request.getContent());
@@ -58,11 +59,17 @@ public class PromptTemplateServiceImpl implements PromptTemplateService {
 
     @Override
     @Transactional
-    public void delete(Long id) {
-        PromptTemplate entity = promptTemplateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Prompt template not found: " + id));
+    public void delete(@NonNull Long id) {
+        PromptTemplate entity = getPromptTemplate(id);
         ensureOwnerOrAdmin(entity);
         promptTemplateRepository.delete(entity);
+    }
+
+    private @NonNull PromptTemplate getPromptTemplate(@NonNull Long id) {
+        return Objects.requireNonNull(
+                promptTemplateRepository.findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Prompt template not found: " + id))
+        );
     }
 
     private void ensureOwnerOrAdmin(PromptTemplate entity) {

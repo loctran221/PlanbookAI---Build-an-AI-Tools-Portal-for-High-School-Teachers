@@ -9,11 +9,13 @@ import com.planbookai.repository.OCRResultRepository;
 import com.planbookai.security.CurrentUserService;
 import com.planbookai.service.OcrService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -27,7 +29,8 @@ public class OcrServiceImpl implements OcrService {
     @Override
     @Transactional
     public OcrResultResponse simulateAndSave(OcrSimulateRequest request) {
-        Exam exam = getExam(request.getExamId());
+        Long examId = Objects.requireNonNull(request.getExamId(), "examId is required");
+        Exam exam = getExam(examId);
         ensureExamOwnerOrAdmin(exam);
 
         double score = Math.round(ThreadLocalRandom.current().nextDouble(5.0, 10.0) * 10.0) / 10.0;
@@ -44,18 +47,20 @@ public class OcrServiceImpl implements OcrService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<OcrResultResponse> findByExam(Long examId) {
+    public List<OcrResultResponse> findByExam(@NonNull Long examId) {
         Exam exam = getExam(examId);
         ensureExamOwnerOrAdmin(exam);
         return ocrResultRepository.findByExam_ExamId(examId).stream().map(this::toResponse).toList();
     }
 
-    private Exam getExam(Long examId) {
-        return examRepository.findById(examId)
-                .orElseThrow(() -> new IllegalArgumentException("Exam not found: " + examId));
+    private @NonNull Exam getExam(@NonNull Long examId) {
+        return Objects.requireNonNull(
+                examRepository.findById(examId)
+                        .orElseThrow(() -> new IllegalArgumentException("Exam not found: " + examId))
+        );
     }
 
-    private void ensureExamOwnerOrAdmin(Exam exam) {
+    private void ensureExamOwnerOrAdmin(@NonNull Exam exam) {
         if (currentUserService.hasRole("ADMIN")) {
             return;
         }

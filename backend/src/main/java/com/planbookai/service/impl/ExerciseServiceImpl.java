@@ -10,12 +10,14 @@ import com.planbookai.repository.UserRepository;
 import com.planbookai.security.CurrentUserService;
 import com.planbookai.service.ExerciseService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -71,7 +73,7 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Override
     @Transactional(readOnly = true)
-    public ExerciseResponse getById(Long exerciseId) {
+    public ExerciseResponse getById(@NonNull Long exerciseId) {
         Exercise exercise = getExercise(exerciseId);
         ensureOwnerOrAdmin(exercise);
         return toResponse(exercise);
@@ -79,18 +81,20 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Override
     @Transactional
-    public void delete(Long exerciseId) {
+    public void delete(@NonNull Long exerciseId) {
         Exercise exercise = getExercise(exerciseId);
         ensureOwnerOrAdmin(exercise);
         exerciseRepository.delete(exercise);
     }
 
-    private Exercise getExercise(Long exerciseId) {
-        return exerciseRepository.findById(exerciseId)
-                .orElseThrow(() -> new IllegalArgumentException("Exercise not found: " + exerciseId));
+    private @NonNull Exercise getExercise(@NonNull Long exerciseId) {
+        return Objects.requireNonNull(
+                exerciseRepository.findById(exerciseId)
+                        .orElseThrow(() -> new IllegalArgumentException("Exercise not found: " + exerciseId))
+        );
     }
 
-    private void ensureOwnerOrAdmin(Exercise exercise) {
+    private void ensureOwnerOrAdmin(@NonNull Exercise exercise) {
         if (currentUserService.hasRole("ADMIN")) {
             return;
         }

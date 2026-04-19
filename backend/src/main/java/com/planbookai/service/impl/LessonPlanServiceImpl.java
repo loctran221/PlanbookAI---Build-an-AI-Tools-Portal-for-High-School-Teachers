@@ -11,11 +11,13 @@ import com.planbookai.repository.UserRepository;
 import com.planbookai.security.CurrentUserService;
 import com.planbookai.service.LessonPlanService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -29,11 +31,12 @@ public class LessonPlanServiceImpl implements LessonPlanService {
     @Override
     @Transactional
     public LessonPlanResponse create(LessonPlanRequest request) {
-        Long currentUserId = currentUserService.requireUserId();
+        Long currentUserId = Objects.requireNonNull(currentUserService.requireUserId());
+        Long templateId = Objects.requireNonNull(request.getTemplateId(), "templateId is required");
         User teacher = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + currentUserId));
-        LessonPlanTemplate template = lessonPlanTemplateRepository.findById(request.getTemplateId())
-                .orElseThrow(() -> new IllegalArgumentException("Template not found: " + request.getTemplateId()));
+        LessonPlanTemplate template = lessonPlanTemplateRepository.findById(templateId)
+                .orElseThrow(() -> new IllegalArgumentException("Template not found: " + templateId));
 
         LessonPlan lessonPlan = new LessonPlan();
         lessonPlan.setTeacher(teacher);
@@ -58,7 +61,7 @@ public class LessonPlanServiceImpl implements LessonPlanService {
 
     @Override
     @Transactional(readOnly = true)
-    public LessonPlanResponse getById(Long lessonPlanId) {
+    public LessonPlanResponse getById(@NonNull Long lessonPlanId) {
         LessonPlan lessonPlan = getLessonPlan(lessonPlanId);
         ensureOwnerOrAdmin(lessonPlan);
         return toResponse(lessonPlan);
@@ -66,11 +69,12 @@ public class LessonPlanServiceImpl implements LessonPlanService {
 
     @Override
     @Transactional
-    public LessonPlanResponse update(Long lessonPlanId, LessonPlanRequest request) {
+    public LessonPlanResponse update(@NonNull Long lessonPlanId, LessonPlanRequest request) {
         LessonPlan lessonPlan = getLessonPlan(lessonPlanId);
         ensureOwnerOrAdmin(lessonPlan);
-        LessonPlanTemplate template = lessonPlanTemplateRepository.findById(request.getTemplateId())
-                .orElseThrow(() -> new IllegalArgumentException("Template not found: " + request.getTemplateId()));
+        Long templateId = Objects.requireNonNull(request.getTemplateId(), "templateId is required");
+        LessonPlanTemplate template = lessonPlanTemplateRepository.findById(templateId)
+                .orElseThrow(() -> new IllegalArgumentException("Template not found: " + templateId));
         lessonPlan.setTemplate(template);
         lessonPlan.setTitle(request.getTitle());
         lessonPlan.setContentJson(request.getContentJson());
@@ -79,18 +83,20 @@ public class LessonPlanServiceImpl implements LessonPlanService {
 
     @Override
     @Transactional
-    public void delete(Long lessonPlanId) {
+    public void delete(@NonNull Long lessonPlanId) {
         LessonPlan lessonPlan = getLessonPlan(lessonPlanId);
         ensureOwnerOrAdmin(lessonPlan);
         lessonPlanRepository.delete(lessonPlan);
     }
 
-    private LessonPlan getLessonPlan(Long lessonPlanId) {
-        return lessonPlanRepository.findById(lessonPlanId)
-                .orElseThrow(() -> new IllegalArgumentException("Lesson plan not found: " + lessonPlanId));
+    private @NonNull LessonPlan getLessonPlan(@NonNull Long lessonPlanId) {
+        return Objects.requireNonNull(
+                lessonPlanRepository.findById(lessonPlanId)
+                        .orElseThrow(() -> new IllegalArgumentException("Lesson plan not found: " + lessonPlanId))
+        );
     }
 
-    private void ensureOwnerOrAdmin(LessonPlan lessonPlan) {
+    private void ensureOwnerOrAdmin(@NonNull LessonPlan lessonPlan) {
         if (currentUserService.hasRole("ADMIN")) {
             return;
         }

@@ -2,6 +2,7 @@ package com.planbookai.service;
 
 import com.planbookai.dto.lessonplan.LessonPlanTemplateRequest;
 import com.planbookai.dto.lessonplan.LessonPlanTemplateResponse;
+import org.springframework.lang.NonNull;
 
 import java.util.List;
 
@@ -10,7 +11,7 @@ public interface LessonPlanTemplateService {
 
     List<LessonPlanTemplateResponse> findAll();
 
-    LessonPlanTemplateResponse update(Long id, LessonPlanTemplateRequest request);
+    LessonPlanTemplateResponse update(@NonNull Long id, LessonPlanTemplateRequest request);
 
-    void delete(Long id);
+    void delete(@NonNull Long id);
 }
