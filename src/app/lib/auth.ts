@@ -1,4 +1,7 @@
-// Mock authentication system
+import { getMe, postLogin } from "./authApi";
+import type { MeResponseBody } from "./authApi";
+import { clearAccessToken, getAccessToken, setAccessToken } from "./session";
+
 export type UserRole = "teacher" | "admin" | "manager" | "staff";
 
 export interface User {
@@ -9,49 +12,69 @@ export interface User {
   avatar?: string;
 }
 
-// Mock user data
-const mockUsers: Record<string, User> = {
-  teacher: {
-    id: "1",
-    name: "Dr. Sarah Johnson",
-    email: "sarah.johnson@school.edu",
-    role: "teacher",
-  },
-  admin: {
-    id: "2",
-    name: "Michael Chen",
-    email: "michael.chen@planbookai.com",
-    role: "admin",
-  },
-  manager: {
-    id: "3",
-    name: "Emily Rodriguez",
-    email: "emily.rodriguez@planbookai.com",
-    role: "manager",
-  },
-  staff: {
-    id: "4",
-    name: "James Williams",
-    email: "james.williams@planbookai.com",
-    role: "staff",
-  },
-};
+const USER_KEY = "planbookai_user";
 
-export const login = (email: string, password: string): User | null => {
-  // Mock login - in real app, this would call an API
-  const role = email.split("@")[0].split(".")[0].toLowerCase() as UserRole;
-  return mockUsers[role] || mockUsers.teacher;
-};
+const ROLE_PRIORITY: UserRole[] = ["admin", "manager", "staff", "teacher"];
 
-export const logout = () => {
-  localStorage.removeItem("user");
-};
+export function mapMeToUser(me: MeResponseBody): User {
+  const normalized = new Set(me.roles.map((r) => r.toUpperCase()));
+  let primary: UserRole = "teacher";
+  for (const candidate of ROLE_PRIORITY) {
+    if (normalized.has(candidate.toUpperCase())) {
+      primary = candidate;
+      break;
+    }
+  }
+  return {
+    id: String(me.id),
+    name: me.fullName || me.email,
+    email: me.email,
+    role: primary,
+  };
+}
 
-export const getCurrentUser = (): User | null => {
-  const userStr = localStorage.getItem("user");
-  return userStr ? JSON.parse(userStr) : null;
-};
+export async function loginWithCredentials(email: string, password: string): Promise<User> {
+  const { token } = await postLogin({ email, password });
+  setAccessToken(token);
+  const me = await getMe();
+  const user = mapMeToUser(me);
+  saveUser(user);
+  return user;
+}
 
-export const saveUser = (user: User) => {
-  localStorage.setItem("user", JSON.stringify(user));
-};
+/** Reloads profile from `/api/auth/me` using the stored token. */
+export async function refreshSessionUser(): Promise<User> {
+  const me = await getMe();
+  const user = mapMeToUser(me);
+  saveUser(user);
+  return user;
+}
+
+export function logout(): void {
+  clearAccessToken();
+  localStorage.removeItem(USER_KEY);
+}
+
+export function getAuthToken(): string | null {
+  return getAccessToken();
+}
+
+export function getCurrentUser(): User | null {
+  const userStr = localStorage.getItem(USER_KEY);
+  if (!userStr) {
+    return null;
+  }
+  try {
+    return JSON.parse(userStr) as User;
+  } catch {
+    return null;
+  }
+}
+
+export function saveUser(user: User): void {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+export function hasStoredSession(): boolean {
+  return Boolean(getAccessToken());
+}

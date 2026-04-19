@@ -2,19 +2,45 @@ import { Outlet, useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
-import { getCurrentUser, logout, type User } from "../lib/auth";
+import {
+  getCurrentUser,
+  hasStoredSession,
+  logout,
+  refreshSessionUser,
+  type User,
+} from "../lib/auth";
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-      navigate("/login");
-    } else {
-      setUser(currentUser);
+    let cancelled = false;
+
+    async function resolveUser() {
+      if (!hasStoredSession()) {
+        navigate("/login");
+        return;
+      }
+      let current = getCurrentUser();
+      if (!current) {
+        try {
+          current = await refreshSessionUser();
+        } catch {
+          logout();
+          navigate("/login");
+          return;
+        }
+      }
+      if (!cancelled) {
+        setUser(current);
+      }
     }
+
+    void resolveUser();
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
   const handleLogout = () => {

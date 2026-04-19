@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search, Filter, Edit, Trash2, Copy } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -23,6 +23,10 @@ import {
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
+import { getApiErrorMessage } from "../lib/api";
+import { deleteQuestion, listQuestions } from "../lib/questionsApi";
+import type { QuestionResponseDto } from "../types/question";
 
 interface Question {
   id: string;
@@ -33,64 +37,76 @@ interface Question {
   answer: string;
   options?: string[];
   createdAt: string;
+  /** Duplicated rows only exist in the UI until you create them via the API. */
+  isLocalOnly?: boolean;
 }
 
-const mockQuestions: Question[] = [
-  {
-    id: "1",
-    question: "What is the atomic number of Carbon?",
-    topic: "Periodic Table",
-    difficulty: "Easy",
-    type: "Multiple Choice",
-    answer: "6",
-    options: ["4", "6", "8", "12"],
-    createdAt: "2026-03-15",
-  },
-  {
-    id: "2",
-    question: "Explain the difference between ionic and covalent bonding.",
-    topic: "Chemical Bonding",
-    difficulty: "Medium",
-    type: "Essay",
-    answer: "Ionic bonding involves electron transfer...",
-    createdAt: "2026-03-14",
-  },
-  {
-    id: "3",
-    question: "Balance the equation: H₂ + O₂ → H₂O",
-    topic: "Chemical Reactions",
-    difficulty: "Medium",
-    type: "Short Answer",
-    answer: "2H₂ + O₂ → 2H₂O",
-    createdAt: "2026-03-13",
-  },
-  {
-    id: "4",
-    question: "What is Avogadro's number?",
-    topic: "Stoichiometry",
-    difficulty: "Easy",
-    type: "Multiple Choice",
-    answer: "6.022 × 10²³",
-    options: ["3.14 × 10²³", "6.022 × 10²³", "1.60 × 10⁻¹⁹", "9.81 × 10⁸"],
-    createdAt: "2026-03-12",
-  },
-  {
-    id: "5",
-    question: "Describe the process of electrolysis in detail.",
-    topic: "Electrochemistry",
-    difficulty: "Hard",
-    type: "Essay",
-    answer: "Electrolysis is a process...",
-    createdAt: "2026-03-10",
-  },
-];
+function mapDifficulty(d: QuestionResponseDto["difficulty"]): Question["difficulty"] {
+  switch (d) {
+    case "EASY":
+      return "Easy";
+    case "MEDIUM":
+      return "Medium";
+    case "HARD":
+      return "Hard";
+    default:
+      return "Medium";
+  }
+}
+
+function mapType(t: QuestionResponseDto["type"]): Question["type"] {
+  switch (t) {
+    case "MCQ":
+      return "Multiple Choice";
+    case "FILL_BLANK":
+      return "Short Answer";
+    case "SHORT_ANSWER":
+      return "Essay";
+    default:
+      return "Short Answer";
+  }
+}
+
+function mapDtoToQuestion(q: QuestionResponseDto): Question {
+  const correct = q.choices?.find((c) => c.correct);
+  return {
+    id: String(q.questionId),
+    question: q.content,
+    topic: q.topicName || "—",
+    difficulty: mapDifficulty(q.difficulty),
+    type: mapType(q.type),
+    answer: correct?.content ?? "—",
+    options: q.type === "MCQ" ? q.choices.map((c) => c.content) : undefined,
+    createdAt: q.createdAt ? String(q.createdAt).slice(0, 10) : "—",
+    isLocalOnly: false,
+  };
+}
 
 export default function QuestionBank() {
-  const [questions, setQuestions] = useState(mockQuestions);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTopic, setFilterTopic] = useState("all");
   const [filterDifficulty, setFilterDifficulty] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  const loadQuestions = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rows = await listQuestions();
+      setQuestions(rows.map(mapDtoToQuestion));
+    } catch (e) {
+      setError(getApiErrorMessage(e, "Could not load questions"));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadQuestions();
+  }, [loadQuestions]);
 
   const filteredQuestions = questions.filter((q) => {
     const matchesSearch = q.question.toLowerCase().includes(searchTerm.toLowerCase());
@@ -99,22 +115,33 @@ export default function QuestionBank() {
     return matchesSearch && matchesTopic && matchesDifficulty;
   });
 
-  const handleDeleteQuestion = (id: string) => {
-    setQuestions(questions.filter((q) => q.id !== id));
-    toast.success("Question deleted successfully");
+  const handleDeleteQuestion = async (id: string, isLocalOnly?: boolean) => {
+    if (isLocalOnly || id.startsWith("local-")) {
+      setQuestions((prev) => prev.filter((q) => q.id !== id));
+      toast.success("Question removed");
+      return;
+    }
+    try {
+      await deleteQuestion(Number(id));
+      setQuestions((prev) => prev.filter((q) => q.id !== id));
+      toast.success("Question deleted successfully");
+    } catch (e) {
+      toast.error(getApiErrorMessage(e, "Delete failed"));
+    }
   };
 
   const handleDuplicateQuestion = (question: Question) => {
-    const newQuestion = {
+    const copy: Question = {
       ...question,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString().split("T")[0],
+      id: `local-${Date.now()}`,
+      createdAt: new Date().toISOString().slice(0, 10),
+      isLocalOnly: true,
     };
-    setQuestions([newQuestion, ...questions]);
-    toast.success("Question duplicated successfully");
+    setQuestions((prev) => [copy, ...prev]);
+    toast.success("Local copy added (not saved to the server yet)");
   };
 
-  const topics = Array.from(new Set(mockQuestions.map((q) => q.topic)));
+  const topics = useMemo(() => Array.from(new Set(questions.map((q) => q.topic))), [questions]);
 
   const difficultyColors = {
     Easy: "bg-green-50 text-green-700 border-green-200",
@@ -122,15 +149,33 @@ export default function QuestionBank() {
     Hard: "bg-red-50 text-red-700 border-red-200",
   };
 
+  if (loading && questions.length === 0 && !error) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center text-gray-600">
+        Loading questions…
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Could not load questions</AlertTitle>
+          <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span>{error}</span>
+            <Button type="button" variant="outline" size="sm" onClick={() => void loadQuestions()}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Question Bank</h1>
-          <p className="mt-1 text-gray-600">
-            Manage and organize your chemistry questions
-          </p>
+          <p className="mt-1 text-gray-600">Manage and organize your chemistry questions</p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -142,9 +187,7 @@ export default function QuestionBank() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Question</DialogTitle>
-              <DialogDescription>
-                Create a new question for your question bank
-              </DialogDescription>
+              <DialogDescription>Create a new question for your question bank</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -296,70 +339,74 @@ export default function QuestionBank() {
       </div>
 
       {/* Questions List */}
-      <div className="space-y-4">
-        {filteredQuestions.map((question) => (
-          <Card key={question.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="text-indigo-600 border-indigo-200">
-                      {question.topic}
-                    </Badge>
-                    <Badge variant="outline" className={difficultyColors[question.difficulty]}>
-                      {question.difficulty}
-                    </Badge>
-                    <Badge variant="outline" className="text-gray-600">
-                      {question.type}
-                    </Badge>
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {question.question}
-                  </h3>
-                  {question.options && (
-                    <div className="grid grid-cols-2 gap-2 mt-3">
-                      {question.options.map((option, idx) => (
-                        <div
-                          key={idx}
-                          className={`rounded-lg border p-2 text-sm ${
-                            option === question.answer
-                              ? "border-green-500 bg-green-50 text-green-900"
-                              : "border-gray-200 bg-gray-50 text-gray-700"
-                          }`}
-                        >
-                          {String.fromCharCode(65 + idx)}. {option}
-                        </div>
-                      ))}
+      {!loading && questions.length === 0 && !error ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>No questions yet</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            Create questions in the backend or extend this page to call{" "}
+            <code className="rounded bg-gray-100 px-1">POST /api/v1/questions</code>.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredQuestions.map((question) => (
+            <Card key={question.id} className="transition-shadow hover:shadow-md">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Badge variant="outline" className="border-indigo-200 text-indigo-600">
+                        {question.topic}
+                      </Badge>
+                      <Badge variant="outline" className={difficultyColors[question.difficulty]}>
+                        {question.difficulty}
+                      </Badge>
+                      <Badge variant="outline" className="text-gray-600">
+                        {question.type}
+                      </Badge>
                     </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-3">
-                    Created: {question.createdAt}
-                  </p>
+                    <h3 className="mb-2 text-lg font-semibold text-gray-900">{question.question}</h3>
+                    {question.options && (
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        {question.options.map((option, idx) => (
+                          <div
+                            key={idx}
+                            className={`rounded-lg border p-2 text-sm ${
+                              option === question.answer
+                                ? "border-green-500 bg-green-50 text-green-900"
+                                : "border-gray-200 bg-gray-50 text-gray-700"
+                            }`}
+                          >
+                            {String.fromCharCode(65 + idx)}. {option}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="mt-3 text-xs text-gray-500">Created: {question.createdAt}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleDuplicateQuestion(question)}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => void handleDeleteQuestion(question.id, question.isLocalOnly)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDuplicateQuestion(question)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteQuestion(question.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-600" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
