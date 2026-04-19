@@ -21,9 +21,6 @@ public class QuestionCreateRequest {
     @NotNull
     private Long topicId;
 
-    @NotNull
-    private Long createdByUserId;
-
     @NotBlank
     private String content;
 

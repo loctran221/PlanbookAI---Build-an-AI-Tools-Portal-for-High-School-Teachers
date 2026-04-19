@@ -15,7 +15,7 @@ import java.util.Set;
  * Sellable subscription plan (named {@code SubscriptionPackage} to avoid clashing with {@code java.lang.Package}).
  */
 @Entity
-@Table(name = "packages")
+@Table(name = "`package`")
 @Getter
 @Setter
 @NoArgsConstructor

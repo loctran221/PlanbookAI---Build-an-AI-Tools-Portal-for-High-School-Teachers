@@ -32,10 +32,10 @@ public class LessonPlan {
     @JoinColumn(name = "template_id", nullable = false)
     private LessonPlanTemplate template;
 
-    @Column(nullable = false, length = 500)
+    @Column(length = 255)
     private String title;
 
-    @Column(name = "content_json", columnDefinition = "TEXT")
+    @Column(name = "content_json", columnDefinition = "json")
     private String contentJson;
 
     @Column(name = "created_at")

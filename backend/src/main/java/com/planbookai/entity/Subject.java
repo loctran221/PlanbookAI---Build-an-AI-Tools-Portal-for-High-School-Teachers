@@ -25,7 +25,7 @@ public class Subject {
     @Column(name = "subject_id")
     private Long subjectId;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(length = 255)
     private String name;
 
     @OneToMany(mappedBy = "subject", fetch = FetchType.LAZY)

@@ -1,5 +1,6 @@
 package com.planbookai.entity;
 
+import com.planbookai.entity.converter.OrderStatusConverter;
 import com.planbookai.entity.enums.OrderStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
  * Purchase / subscription instance (ERD: ORDER). Entity name avoids JPQL keyword {@code Order}.
  */
 @Entity
-@Table(name = "orders")
+@Table(name = "`order`")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -34,7 +35,7 @@ public class UserOrder {
     @JoinColumn(name = "package_id", nullable = false)
     private SubscriptionPackage subscriptionPackage;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = OrderStatusConverter.class)
     @Column(nullable = false, length = 20)
     private OrderStatus status;
 

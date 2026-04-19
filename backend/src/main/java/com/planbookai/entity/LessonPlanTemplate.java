@@ -1,5 +1,6 @@
 package com.planbookai.entity;
 
+import com.planbookai.entity.converter.TemplateStatusConverter;
 import com.planbookai.entity.enums.TemplateStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -31,14 +32,14 @@ public class LessonPlanTemplate {
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
-    @Column(nullable = false, length = 500)
+    @Column(length = 255)
     private String title;
 
     /** Outline / sections definition (JSON as text). */
-    @Column(name = "structure_json", columnDefinition = "TEXT")
+    @Column(name = "structure_json", columnDefinition = "json")
     private String structureJson;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TemplateStatusConverter.class)
     @Column(nullable = false, length = 20)
     private TemplateStatus status;
 

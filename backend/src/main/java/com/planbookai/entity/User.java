@@ -14,7 +14,7 @@ import java.util.Set;
  * Application account: login identity, profile, and account state.
  */
 @Entity
-@Table(name = "users")
+@Table(name = "`user`")
 @Getter
 @Setter
 @NoArgsConstructor

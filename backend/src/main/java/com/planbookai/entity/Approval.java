@@ -1,5 +1,7 @@
 package com.planbookai.entity;
 
+import com.planbookai.entity.converter.ApprovalContentTypeConverter;
+import com.planbookai.entity.converter.ApprovalStatusConverter;
 import com.planbookai.entity.enums.ApprovalContentType;
 import com.planbookai.entity.enums.ApprovalStatus;
 import jakarta.persistence.*;
@@ -34,11 +36,11 @@ public class Approval {
     @Column(name = "content_id", nullable = false)
     private Long contentId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "content_type", nullable = false, length = 40)
+    @Convert(converter = ApprovalContentTypeConverter.class)
+    @Column(name = "content_type", nullable = false, length = 50)
     private ApprovalContentType contentType;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = ApprovalStatusConverter.class)
     @Column(nullable = false, length = 20)
     private ApprovalStatus status;
 

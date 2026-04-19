@@ -30,7 +30,7 @@ public class Exam {
     @JoinColumn(name = "teacher_id", nullable = false)
     private User teacher;
 
-    @Column(nullable = false, length = 500)
+    @Column(length = 255)
     private String title;
 
     /** Duration in minutes (or your domain unit—keep consistent in API). */

@@ -34,7 +34,7 @@ public class OCRResult {
     private Double score;
 
     /** Raw OCR / grading payload as JSON text. */
-    @Column(name = "result_json", columnDefinition = "TEXT")
+    @Column(name = "result_json", columnDefinition = "json")
     private String resultJson;
 
     @Column(name = "graded_at")

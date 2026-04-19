@@ -1,5 +1,6 @@
 package com.planbookai.entity;
 
+import com.planbookai.entity.converter.PromptTemplateTypeConverter;
 import com.planbookai.entity.enums.PromptTemplateType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -29,13 +30,13 @@ public class PromptTemplate {
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
-    @Column(nullable = false, length = 500)
+    @Column(length = 255)
     private String title;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = PromptTemplateTypeConverter.class)
     @Column(nullable = false, length = 30)
     private PromptTemplateType type;
 

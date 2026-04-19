@@ -1,5 +1,8 @@
 package com.planbookai.entity;
 
+import com.planbookai.entity.converter.QuestionDifficultyConverter;
+import com.planbookai.entity.converter.QuestionStatusConverter;
+import com.planbookai.entity.converter.QuestionTypeConverter;
 import com.planbookai.entity.enums.QuestionDifficulty;
 import com.planbookai.entity.enums.QuestionStatus;
 import com.planbookai.entity.enums.QuestionType;
@@ -41,15 +44,15 @@ public class Question {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = QuestionTypeConverter.class)
     @Column(nullable = false, length = 30)
     private QuestionType type;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = QuestionDifficultyConverter.class)
     @Column(nullable = false, length = 20)
     private QuestionDifficulty difficulty;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = QuestionStatusConverter.class)
     @Column(nullable = false, length = 20)
     private QuestionStatus status;
 

@@ -4,6 +4,7 @@ import com.planbookai.dto.question.QuestionChoiceCreateRequest;
 import com.planbookai.dto.question.QuestionChoiceResponse;
 import com.planbookai.dto.question.QuestionCreateRequest;
 import com.planbookai.dto.question.QuestionResponse;
+import com.planbookai.dto.question.QuestionUpdateRequest;
 import com.planbookai.entity.Question;
 import com.planbookai.entity.QuestionChoice;
 import com.planbookai.entity.Topic;
@@ -13,6 +14,7 @@ import com.planbookai.entity.enums.QuestionType;
 import com.planbookai.repository.QuestionRepository;
 import com.planbookai.repository.TopicRepository;
 import com.planbookai.repository.UserRepository;
+import com.planbookai.security.CurrentUserService;
 import com.planbookai.service.QuestionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class QuestionServiceImpl implements QuestionService {
     private final QuestionRepository questionRepository;
     private final TopicRepository topicRepository;
     private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     @Override
     @Transactional(readOnly = true)
@@ -47,8 +50,9 @@ public class QuestionServiceImpl implements QuestionService {
     public QuestionResponse create(QuestionCreateRequest request) {
         Topic topic = topicRepository.findById(request.getTopicId())
                 .orElseThrow(() -> new IllegalArgumentException("Topic not found: " + request.getTopicId()));
-        User author = userRepository.findById(request.getCreatedByUserId())
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.getCreatedByUserId()));
+        Long currentUserId = currentUserService.requireUserId();
+        User author = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + currentUserId));
 
         validateChoicesForType(request.getType(), request.getChoices());
 
@@ -71,6 +75,69 @@ public class QuestionServiceImpl implements QuestionService {
 
         Question saved = questionRepository.save(entity);
         return toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public QuestionResponse update(Long questionId, QuestionUpdateRequest request) {
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new IllegalArgumentException("Question not found: " + questionId));
+        ensureOwnerOrAdmin(question);
+
+        Topic topic = topicRepository.findById(request.getTopicId())
+                .orElseThrow(() -> new IllegalArgumentException("Topic not found: " + request.getTopicId()));
+        validateChoicesForType(request.getType(), request.getChoices());
+
+        question.setTopic(topic);
+        question.setContent(request.getContent());
+        question.setType(request.getType());
+        question.setDifficulty(request.getDifficulty());
+
+        question.getChoices().clear();
+        for (QuestionChoiceCreateRequest c : request.getChoices()) {
+            QuestionChoice choice = new QuestionChoice();
+            choice.setQuestion(question);
+            choice.setContent(c.getContent());
+            choice.setIsCorrect(c.getCorrect());
+            question.getChoices().add(choice);
+        }
+
+        return toResponse(questionRepository.save(question));
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long questionId) {
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new IllegalArgumentException("Question not found: " + questionId));
+        ensureOwnerOrAdmin(question);
+        questionRepository.delete(question);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<QuestionResponse> filter(Long topicId, Long subjectId) {
+        if (topicId != null) {
+            return questionRepository.findByTopic_TopicId(topicId).stream().map(this::toResponse).toList();
+        }
+        if (subjectId != null) {
+            return questionRepository.findAll().stream()
+                    .filter(q -> q.getTopic() != null && q.getTopic().getSubject() != null
+                            && subjectId.equals(q.getTopic().getSubject().getSubjectId()))
+                    .map(this::toResponse)
+                    .toList();
+        }
+        return findAll();
+    }
+
+    private void ensureOwnerOrAdmin(Question question) {
+        Long currentUserId = currentUserService.requireUserId();
+        if (currentUserService.hasRole("ADMIN")) {
+            return;
+        }
+        if (!currentUserId.equals(question.getCreatedBy().getUserId())) {
+            throw new IllegalArgumentException("You can only modify your own question");
+        }
     }
 
     private void validateChoicesForType(QuestionType type, List<QuestionChoiceCreateRequest> choices) {
