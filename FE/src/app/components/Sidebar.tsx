@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router";
+import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   BookOpen,
@@ -12,6 +12,7 @@ import {
   Database,
   LogOut,
   GraduationCap,
+  Folder,
 } from "lucide-react";
 import { cn } from "../components/ui/utils";
 import type { UserRole } from "../lib/auth";
@@ -27,6 +28,8 @@ const navigationByRole: Record<
 > = {
   teacher: [
     { icon: LayoutDashboard, label: "Dashboard", href: "/teacher" },
+    { icon: Folder, label: "My Workspace", href: "/teacher/workspace" },
+    { icon: Users, label: "Class Management", href: "/teacher/classes" },
     { icon: BookOpen, label: "Question Bank", href: "/teacher/question-bank" },
     {
       icon: Wand2,
@@ -80,14 +83,24 @@ export function Sidebar({ role, onLogout }: SidebarProps) {
         {navigation.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.href;
+          
+          const handleClick = (e: React.MouseEvent) => {
+            if (item.href === "/admin" && item.label !== "Dashboard") {
+              e.preventDefault();
+              import("sonner").then(({ toast }) => {
+                toast.info(`Tính năng ${item.label} đang được phát triển.`);
+              });
+            }
+          };
 
           return (
             <Link
-              key={item.href}
+              key={item.label}
               to={item.href}
+              onClick={handleClick}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
+                isActive && item.label === "Dashboard"
                   ? "bg-indigo-50 text-indigo-700"
                   : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
               )}

@@ -13,5 +13,6 @@ public class OcrResultResponse {
     private String studentName;
     private Double score;
     private String resultJson;
+    private Boolean requiresReview;
     private LocalDateTime gradedAt;
 }

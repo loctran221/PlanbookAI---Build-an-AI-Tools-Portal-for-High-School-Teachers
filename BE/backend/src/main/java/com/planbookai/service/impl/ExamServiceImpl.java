@@ -28,6 +28,8 @@ public class ExamServiceImpl implements ExamService {
     private final QuestionRepository questionRepository;
     private final UserRepository userRepository;
     private final CurrentUserService currentUserService;
+    private final com.planbookai.repository.ExamVersionRepository examVersionRepository;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -39,9 +41,19 @@ public class ExamServiceImpl implements ExamService {
         List<Question> source = request.getTopicId() == null
                 ? questionRepository.findAll()
                 : questionRepository.findByTopic_TopicId(request.getTopicId());
-        if (source.size() < request.getTotalQuestions()) {
-            throw new IllegalArgumentException("Not enough questions to generate exam");
+
+        if (request.getQuestionType() != null && !request.getQuestionType().isEmpty()) {
+            source = source.stream()
+                    .filter(q -> q.getType() != null && q.getType().name().equalsIgnoreCase(request.getQuestionType()))
+                    .toList();
         }
+
+        if (source.size() < request.getTotalQuestions()) {
+            throw new IllegalArgumentException("Not enough questions to generate exam. Found: " + source.size() + ", Required: " + request.getTotalQuestions());
+        }
+        
+        // Convert to modifiable list before shuffling
+        source = new java.util.ArrayList<>(source);
         Collections.shuffle(source);
         List<Question> selected = source.stream().limit(request.getTotalQuestions()).toList();
 
@@ -121,5 +133,107 @@ public class ExamServiceImpl implements ExamService {
                 .createdAt(exam.getCreatedAt())
                 .questionIds(questionIds)
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public List<com.planbookai.dto.exam.ExamVersionDTO> generateVersions(Long examId, int count) {
+        Exam exam = getExam(examId);
+        ensureOwnerOrAdmin(exam);
+
+        List<ExamQuestion> examQuestions = examQuestionRepository.findByExam_ExamIdOrderByOrderIndexAsc(examId);
+        if (examQuestions.isEmpty()) {
+            throw new IllegalArgumentException("Không có câu hỏi nào trong đề thi này");
+        }
+
+        List<com.planbookai.dto.exam.ExamVersionDTO> result = new java.util.ArrayList<>();
+        
+        for (int i = 1; i <= count; i++) {
+            // Shuffle questions to create a new version
+            java.util.List<ExamQuestion> shuffled = new java.util.ArrayList<>(examQuestions);
+            java.util.Collections.shuffle(shuffled);
+            
+            java.util.List<String> part1Answers = new java.util.ArrayList<>();
+            java.util.List<java.util.Map<String, Object>> details = new java.util.ArrayList<>();
+            
+            int qNum = 1;
+            for (ExamQuestion eq : shuffled) {
+                com.planbookai.entity.Question q = eq.getQuestion();
+                
+                // Shuffle choices if MCQ
+                java.util.List<com.planbookai.entity.QuestionChoice> originalChoices = q.getChoices();
+                java.util.List<com.planbookai.entity.QuestionChoice> shuffledChoices = new java.util.ArrayList<>();
+                if (originalChoices != null) {
+                    shuffledChoices.addAll(originalChoices);
+                    java.util.Collections.shuffle(shuffledChoices);
+                }
+                
+                String correctChoice = "A"; // default
+                java.util.List<String> options = new java.util.ArrayList<>();
+                for (int c = 0; c < shuffledChoices.size(); c++) {
+                    String letter = String.valueOf((char) ('A' + c));
+                    options.add(letter + ". " + shuffledChoices.get(c).getContent());
+                    if (Boolean.TRUE.equals(shuffledChoices.get(c).getIsCorrect())) {
+                        correctChoice = letter;
+                    }
+                }
+                part1Answers.add(correctChoice);
+                
+                java.util.Map<String, Object> detail = new java.util.HashMap<>();
+                detail.put("questionId", q.getQuestionId());
+                detail.put("content", q.getContent());
+                detail.put("type", q.getType() != null ? q.getType().name() : "MCQ");
+                detail.put("options", options);
+                detail.put("correctChoice", correctChoice);
+                details.add(detail);
+                
+                qNum++;
+            }
+
+            java.util.Map<String, Object> rootJson = new java.util.HashMap<>();
+            rootJson.put("part_1", part1Answers);
+            rootJson.put("details", details);
+
+            String answersJson = "{}";
+            try {
+                answersJson = objectMapper.writeValueAsString(rootJson);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            String code = String.valueOf(100 + i); // 101, 102, 103...
+            ExamVersion version = ExamVersion.builder()
+                    .exam(exam)
+                    .versionCode(code)
+                    .answerKeyJson(answersJson)
+                    .build();
+                    
+            version = examVersionRepository.save(version);
+            
+            result.add(com.planbookai.dto.exam.ExamVersionDTO.builder()
+                    .versionId(version.getVersionId())
+                    .examId(exam.getExamId())
+                    .versionCode(version.getVersionCode())
+                    .answerKeyJson(version.getAnswerKeyJson())
+                    .build());
+        }
+        
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.planbookai.dto.exam.ExamVersionDTO> getVersions(Long examId) {
+        Exam exam = getExam(examId);
+        ensureOwnerOrAdmin(exam);
+
+        return examVersionRepository.findByExam_ExamId(examId).stream()
+                .map(v -> com.planbookai.dto.exam.ExamVersionDTO.builder()
+                        .versionId(v.getVersionId())
+                        .examId(exam.getExamId())
+                        .versionCode(v.getVersionCode())
+                        .answerKeyJson(v.getAnswerKeyJson())
+                        .build())
+                .toList();
     }
 }

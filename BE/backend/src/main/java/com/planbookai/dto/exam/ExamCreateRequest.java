@@ -19,4 +19,6 @@ public class ExamCreateRequest {
     private Integer totalQuestions;
 
     private Long topicId;
+
+    private String questionType;
 }

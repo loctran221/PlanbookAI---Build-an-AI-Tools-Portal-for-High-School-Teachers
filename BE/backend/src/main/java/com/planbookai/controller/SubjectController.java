@@ -17,7 +17,12 @@ public class SubjectController {
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public List<Subject> list() {
-        return subjectRepository.findAll();
+    public List<java.util.Map<String, Object>> list() {
+        return subjectRepository.findAll().stream().map(s -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("subjectId", s.getSubjectId());
+            map.put("name", s.getName());
+            return map;
+        }).toList();
     }
 }

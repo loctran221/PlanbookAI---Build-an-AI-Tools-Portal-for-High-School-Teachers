@@ -1,4 +1,5 @@
 import { TrendingUp, Users, BookOpen, Award, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
 import { StatCard } from "../components/StatCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import {
@@ -29,8 +30,9 @@ import {
   PolarRadiusAxis,
   Radar,
 } from "recharts";
+import apiClient from "../../api/apiClient";
 
-// Mock data
+// Mock data for advanced analytics that don't exist in DB yet
 const performanceTrend = [
   { month: "Sep", class1: 78, class2: 82, class3: 75 },
   { month: "Oct", class1: 82, class2: 85, class3: 79 },
@@ -39,15 +41,6 @@ const performanceTrend = [
   { month: "Jan", class1: 87, class2: 90, class3: 86 },
   { month: "Feb", class1: 89, class2: 91, class3: 88 },
   { month: "Mar", class1: 91, class2: 93, class3: 90 },
-];
-
-const topicPerformance = [
-  { topic: "Bonding", score: 92 },
-  { topic: "Periodic", score: 85 },
-  { topic: "Reactions", score: 88 },
-  { topic: "Acids/Bases", score: 78 },
-  { topic: "Stoichiometry", score: 82 },
-  { topic: "Thermo", score: 75 },
 ];
 
 const scoreDistribution = [
@@ -75,6 +68,14 @@ const radarData = [
 ];
 
 export default function Analytics() {
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    apiClient.get("/api/v1/analytics/teacher").then(res => setData(res.data)).catch(console.error);
+  }, []);
+
+  if (!data) return <div className="p-8 text-center text-gray-500">Đang tải dữ liệu phân tích...</div>;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -103,27 +104,23 @@ export default function Analytics() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Average Class Score"
-          value="85.4%"
+          value={`${data.avgClassScore || 0}%`}
           icon={TrendingUp}
-          trend={{ value: "4.2%", isPositive: true }}
         />
         <StatCard
           title="Total Students"
-          value="84"
+          value={data.totalStudents || 0}
           icon={Users}
-          description="Across 3 classes"
         />
         <StatCard
-          title="Exams Graded"
-          value="247"
+          title="Exams Created"
+          value={data.examsCreated || 0}
           icon={BookOpen}
-          trend={{ value: "18", isPositive: true }}
         />
         <StatCard
-          title="Top Performer"
-          value="95%"
+          title="Total Questions"
+          value={data.totalQuestions || 0}
           icon={Award}
-          description="Emma Wilson"
         />
       </div>
 
@@ -174,17 +171,17 @@ export default function Analytics() {
           <CardHeader>
             <CardTitle>Topic Performance</CardTitle>
             <CardDescription>
-              Average scores by chemistry topic
+              Number of questions by chemistry topic
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topicPerformance}>
+              <BarChart data={data.topicDistribution || []}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />
                 <XAxis dataKey="topic" className="text-xs" />
-                <YAxis className="text-xs" domain={[0, 100]} />
+                <YAxis className="text-xs" />
                 <Tooltip />
-                <Bar dataKey="score" fill="#4f46e5" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="count" fill="#4f46e5" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

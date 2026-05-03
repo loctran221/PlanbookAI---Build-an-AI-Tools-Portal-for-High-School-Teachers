@@ -17,7 +17,13 @@ public class TopicController {
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public List<Topic> list() {
-        return topicRepository.findAll();
+    public List<java.util.Map<String, Object>> list() {
+        return topicRepository.findAll().stream().map(t -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("topicId", t.getTopicId());
+            map.put("name", t.getName());
+            map.put("subjectId", t.getSubject() != null ? t.getSubject().getSubjectId() : null);
+            return map;
+        }).toList();
     }
 }

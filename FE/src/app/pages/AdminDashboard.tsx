@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Users, Settings, Database, DollarSign, UserPlus, Shield, Activity } from "lucide-react";
 import { StatCard } from "../components/StatCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
@@ -12,35 +13,35 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
-
-// Mock data
-const revenueData = [
-  { month: "Oct", revenue: 12500 },
-  { month: "Nov", revenue: 15200 },
-  { month: "Dec", revenue: 18900 },
-  { month: "Jan", revenue: 21400 },
-  { month: "Feb", revenue: 24800 },
-  { month: "Mar", revenue: 28300 },
-];
-
-const userGrowth = [
-  { month: "Oct", users: 45 },
-  { month: "Nov", users: 62 },
-  { month: "Dec", users: 78 },
-  { month: "Jan", users: 95 },
-  { month: "Feb", users: 124 },
-  { month: "Mar", users: 156 },
-];
-
-const recentUsers = [
-  { id: "U156", name: "Dr. Sarah Johnson", email: "sarah.j@school.edu", role: "Teacher", status: "Active", joinDate: "2026-03-18" },
-  { id: "U155", name: "Prof. Michael Chen", email: "m.chen@college.edu", role: "Teacher", status: "Active", joinDate: "2026-03-17" },
-  { id: "U154", name: "Emily Rodriguez", email: "emily.r@school.edu", role: "Manager", status: "Active", joinDate: "2026-03-15" },
-  { id: "U153", name: "James Williams", email: "james.w@edu.org", role: "Staff", status: "Pending", joinDate: "2026-03-14" },
-  { id: "U152", name: "Lisa Anderson", email: "lisa.a@school.edu", role: "Teacher", status: "Active", joinDate: "2026-03-12" },
-];
+import { api } from "../lib/auth";
 
 export default function AdminDashboard() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      const res = await api.get("/api/admin/dashboard");
+      setData(res);
+    } catch (err) {
+      console.error("Failed to fetch admin dashboard", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-8 text-center text-gray-500">Đang tải dữ liệu hệ thống...</div>;
+  }
+
+  if (!data) {
+    return <div className="p-8 text-center text-red-500">Lỗi khi tải dữ liệu.</div>;
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -51,35 +52,31 @@ export default function AdminDashboard() {
             System overview and user management
           </p>
         </div>
-        <Button className="bg-indigo-600 hover:bg-indigo-700">
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add New User
-        </Button>
       </div>
 
       {/* Stats */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Users"
-          value="156"
+          value={data.totalUsers.toString()}
           icon={Users}
-          trend={{ value: "12%", isPositive: true }}
+          trend={{ value: "All time", isPositive: true }}
         />
         <StatCard
           title="Monthly Revenue"
-          value="$28.3K"
+          value={`$${data.monthlyRevenue.toFixed(1)}`}
           icon={DollarSign}
-          trend={{ value: "14%", isPositive: true }}
+          trend={{ value: "This month", isPositive: true }}
         />
         <StatCard
           title="Active Teachers"
-          value="124"
+          value={data.activeTeachers.toString()}
           icon={Shield}
-          description="Out of 156 users"
+          description={`Out of ${data.totalUsers} users`}
         />
         <StatCard
           title="System Uptime"
-          value="99.9%"
+          value={data.systemUptime}
           icon={Activity}
           description="Last 30 days"
         />
@@ -94,7 +91,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={revenueData}>
+              <LineChart data={data.revenueGrowth}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />
                 <XAxis dataKey="month" className="text-xs" />
                 <YAxis className="text-xs" />
@@ -112,7 +109,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={userGrowth}>
+              <BarChart data={data.userGrowth}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />
                 <XAxis dataKey="month" className="text-xs" />
                 <YAxis className="text-xs" />
@@ -132,7 +129,6 @@ export default function AdminDashboard() {
               <CardTitle>Recent Users</CardTitle>
               <CardDescription>Latest user registrations</CardDescription>
             </div>
-            <Button variant="outline" size="sm">View All</Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -145,11 +141,10 @@ export default function AdminDashboard() {
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Join Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentUsers.map((user) => (
+              {data.recentUsers && data.recentUsers.map((user: any) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.id}</TableCell>
                   <TableCell>{user.name}</TableCell>
@@ -167,14 +162,6 @@ export default function AdminDashboard() {
                     )}
                   </TableCell>
                   <TableCell className="text-gray-600">{user.joinDate}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm">Edit</Button>
-                      <Button variant="ghost" size="sm" className="text-red-600">
-                        Delete
-                      </Button>
-                    </div>
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

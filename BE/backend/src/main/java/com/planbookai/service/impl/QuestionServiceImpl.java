@@ -150,16 +150,15 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     private void validateChoicesForType(QuestionType type, List<QuestionChoiceCreateRequest> choices) {
+        if (choices == null || choices.isEmpty()) {
+            throw new IllegalArgumentException("Question requires at least one answer choice");
+        }
+
         if (type == QuestionType.MCQ) {
-            if (choices == null || choices.isEmpty()) {
-                throw new IllegalArgumentException("MCQ questions require at least one choice");
-            }
             long correct = choices.stream().filter(c -> Boolean.TRUE.equals(c.getCorrect())).count();
             if (correct != 1) {
                 throw new IllegalArgumentException("MCQ must have exactly one correct choice");
             }
-        } else if (choices != null && !choices.isEmpty()) {
-            throw new IllegalArgumentException("Choices are only allowed for MCQ type");
         }
     }
 

@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import { GraduationCap } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { login, saveUser } from "../lib/auth";
+import { loginWithCredentials } from "../lib/auth";
 import { toast } from "sonner";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 
@@ -17,28 +17,33 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !password) {
+      toast.error("Vui lòng nhập email và mật khẩu");
+      return;
+    }
     setLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      const user = login(email, password);
-      if (user) {
-        saveUser(user);
-        toast.success("Welcome back!");
-        navigate(`/${user.role}`);
-      } else {
-        toast.error("Invalid credentials");
-      }
+    try {
+      const user = await loginWithCredentials(email, password);
+      toast.success(`Chào mừng, ${user.name}!`);
+      navigate(`/${user.role}`);
+    } catch (err: any) {
+      toast.error(err.message ?? "Email hoặc mật khẩu không đúng");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
+
+  const fillDemo = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPassword("Password123!");
   };
 
   return (
     <div className="flex min-h-screen">
-      {/* Left side - Image */}
+      {/* Left side */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-cyan-600">
         <ImageWithFallback
-          src="https://images.unsplash.com/photo-1758685848084-fc51214f3cd0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaGVtaXN0cnklMjBjbGFzc3Jvb20lMjB0ZWFjaGluZyUyMGVkdWNhdGlvbnxlbnwxfHx8fDE3NzM5OTI1OTd8MA&ixlib=rb-4.1.0&q=80&w=1080"
+          src="https://images.unsplash.com/photo-1758685848084-fc51214f3cd0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"
           alt="Chemistry classroom"
           className="absolute inset-0 h-full w-full object-cover opacity-20"
         />
@@ -52,33 +57,24 @@ export default function LoginPage() {
               <p className="text-indigo-200">AI-Powered Teaching Platform</p>
             </div>
           </div>
-          <h2 className="text-3xl font-bold mb-4">
-            Transform Your Teaching Experience
-          </h2>
+          <h2 className="text-3xl font-bold mb-4">Transform Your Teaching Experience</h2>
           <p className="text-xl text-indigo-100 mb-8">
-            Automate lesson planning, generate exercises, and grade with AI-powered tools designed for chemistry teachers.
+            Tự động lập kế hoạch bài dạy, tạo đề thi và chấm bài bằng AI dành cho giáo viên Hóa học.
           </p>
           <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-cyan-400"></div>
-              <p className="text-indigo-100">AI-powered exercise generation</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-cyan-400"></div>
-              <p className="text-indigo-100">Automated OCR grading system</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-cyan-400"></div>
-              <p className="text-indigo-100">Comprehensive question bank management</p>
-            </div>
+            {["AI-powered exercise & exam generation", "Automated OCR grading system", "Comprehensive question bank management"].map((f) => (
+              <div key={f} className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full bg-cyan-400" />
+                <p className="text-indigo-100">{f}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Right side - Login form */}
+      {/* Right side */}
       <div className="flex flex-1 items-center justify-center p-8 bg-gray-50">
         <div className="w-full max-w-md">
-          {/* Mobile logo */}
           <div className="flex lg:hidden items-center justify-center gap-2 mb-8">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-cyan-500">
               <GraduationCap className="h-7 w-7 text-white" />
@@ -88,10 +84,8 @@ export default function LoginPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Welcome Back</CardTitle>
-              <CardDescription>
-                Sign in to your account to continue
-              </CardDescription>
+              <CardTitle>Đăng nhập</CardTitle>
+              <CardDescription>Nhập thông tin tài khoản để tiếp tục</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-4">
@@ -100,14 +94,15 @@ export default function LoginPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="your.email@school.edu"
+                    placeholder="email@planbookai.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">Mật khẩu</Label>
                   <Input
                     id="password"
                     type="password"
@@ -115,6 +110,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    autoComplete="current-password"
                   />
                 </div>
                 <Button
@@ -122,53 +118,28 @@ export default function LoginPage() {
                   className="w-full bg-indigo-600 hover:bg-indigo-700"
                   disabled={loading}
                 >
-                  {loading ? "Signing in..." : "Sign In"}
+                  {loading ? "Đang đăng nhập..." : "Đăng nhập"}
                 </Button>
               </form>
 
               <div className="mt-6 border-t pt-6">
-                <p className="text-sm text-gray-600 mb-3">Demo accounts:</p>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEmail("sarah.johnson@school.edu");
-                      setPassword("password");
-                    }}
-                  >
-                    Teacher
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEmail("michael.chen@planbookai.com");
-                      setPassword("password");
-                    }}
-                  >
-                    Admin
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEmail("emily.rodriguez@planbookai.com");
-                      setPassword("password");
-                    }}
-                  >
-                    Manager
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEmail("james.williams@planbookai.com");
-                      setPassword("password");
-                    }}
-                  >
-                    Staff
-                  </Button>
+                  {[
+                    { label: "Teacher",  email: "teacher@planbookai.com" },
+                    { label: "Admin",    email: "admin@planbookai.com"   },
+                    { label: "Manager",  email: "manager@planbookai.com" },
+                    { label: "Staff",    email: "staff@planbookai.com"   },
+                  ].map(({ label, email: demoEmail }) => (
+                    <Button
+                      key={label}
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() => fillDemo(demoEmail)}
+                    >
+                      {label}
+                    </Button>
+                  ))}
                 </div>
               </div>
             </CardContent>

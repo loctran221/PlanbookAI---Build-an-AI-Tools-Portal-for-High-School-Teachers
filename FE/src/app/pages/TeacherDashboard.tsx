@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 import {
   BookOpen,
   Wand2,
@@ -9,65 +9,25 @@ import {
   CheckCircle2,
   Users,
 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { StatCard } from "../components/StatCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
-
-// Mock data
-const recentExams = [
-  { id: 1, title: "Chemical Bonding Quiz", date: "2026-03-18", students: 28, graded: 28, avgScore: 85 },
-  { id: 2, title: "Periodic Table Test", date: "2026-03-15", students: 28, graded: 25, avgScore: 78 },
-  { id: 3, title: "Stoichiometry Exam", date: "2026-03-12", students: 30, graded: 30, avgScore: 82 },
-];
-
-const performanceData = [
-  { week: "Week 1", score: 75 },
-  { week: "Week 2", score: 78 },
-  { week: "Week 3", score: 82 },
-  { week: "Week 4", score: 85 },
-];
-
-const topicDistribution = [
-  { topic: "Bonding", count: 45 },
-  { topic: "Reactions", count: 38 },
-  { topic: "States", count: 32 },
-  { topic: "Periodic", count: 28 },
-];
-
-const quickActions = [
-  {
-    icon: Wand2,
-    title: "Generate Exercise",
-    description: "Create AI-powered exercises",
-    href: "/teacher/exercise-generator",
-    color: "bg-purple-50 text-purple-600",
-  },
-  {
-    icon: FileText,
-    title: "Create Exam",
-    description: "Build multiple choice exams",
-    href: "/teacher/exam-generator",
-    color: "bg-blue-50 text-blue-600",
-  },
-  {
-    icon: ScanLine,
-    title: "Grade Papers",
-    description: "OCR-based auto grading",
-    href: "/teacher/ocr-grading",
-    color: "bg-green-50 text-green-600",
-  },
-  {
-    icon: BookOpen,
-    title: "Question Bank",
-    description: "Manage your questions",
-    href: "/teacher/question-bank",
-    color: "bg-orange-50 text-orange-600",
-  },
-];
+import apiClient from "../../api/apiClient";
 
 export default function TeacherDashboard() {
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    apiClient.get("/api/v1/analytics/teacher").then(res => {
+      setData(res.data);
+    }).catch(console.error);
+  }, []);
+
+  if (!data) return <div className="p-8 text-center text-gray-500">Đang tải dữ liệu...</div>;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -82,51 +42,24 @@ export default function TeacherDashboard() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Questions"
-          value="247"
+          value={data.totalQuestions || 0}
           icon={BookOpen}
-          trend={{ value: "12%", isPositive: true }}
         />
         <StatCard
           title="Exams Created"
-          value="18"
+          value={data.examsCreated || 0}
           icon={FileText}
-          description="This month"
         />
         <StatCard
           title="Avg. Class Score"
-          value="82%"
+          value={`${data.avgClassScore || 0}%`}
           icon={TrendingUp}
-          trend={{ value: "3%", isPositive: true }}
         />
         <StatCard
-          title="Students"
-          value="84"
+          title="Students Graded"
+          value={data.totalStudents || 0}
           icon={Users}
-          description="Across 3 classes"
         />
-      </div>
-
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Link key={action.href} to={action.href}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="p-6">
-                    <div className={`inline-flex h-12 w-12 items-center justify-center rounded-lg ${action.color} mb-4`}>
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{action.title}</h3>
-                    <p className="text-sm text-gray-600">{action.description}</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
       </div>
 
       {/* Charts Row */}
@@ -139,7 +72,7 @@ export default function TeacherDashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={performanceData}>
+              <LineChart data={data.performanceData || []}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />
                 <XAxis dataKey="week" className="text-xs" />
                 <YAxis className="text-xs" />
@@ -158,7 +91,7 @@ export default function TeacherDashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={topicDistribution}>
+              <BarChart data={data.topicDistribution || []}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />
                 <XAxis dataKey="topic" className="text-xs" />
                 <YAxis className="text-xs" />
@@ -185,7 +118,9 @@ export default function TeacherDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentExams.map((exam) => (
+            {(data.recentExams || []).length === 0 ? (
+              <div className="text-center py-6 text-gray-500">Chưa có đề thi nào.</div>
+            ) : (data.recentExams || []).map((exam: any) => (
               <div
                 key={exam.id}
                 className="flex items-center justify-between p-4 rounded-lg border bg-white hover:bg-gray-50 transition-colors"
@@ -214,7 +149,7 @@ export default function TeacherDashboard() {
                     <p className="text-sm text-gray-600">Avg. Score</p>
                     <p className="text-2xl font-bold text-indigo-600">{exam.avgScore}%</p>
                   </div>
-                  {exam.graded === exam.students ? (
+                  {exam.graded > 0 && exam.graded >= exam.students ? (
                     <Badge className="bg-green-50 text-green-700 hover:bg-green-50">
                       <CheckCircle2 className="mr-1 h-3 w-3" />
                       Complete

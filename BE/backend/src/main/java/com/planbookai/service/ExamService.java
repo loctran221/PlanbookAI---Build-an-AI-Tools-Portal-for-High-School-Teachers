@@ -14,4 +14,8 @@ public interface ExamService {
     ExamResponse getById(@NonNull Long examId);
 
     void delete(@NonNull Long examId);
+
+    List<com.planbookai.dto.exam.ExamVersionDTO> generateVersions(Long examId, int count);
+
+    List<com.planbookai.dto.exam.ExamVersionDTO> getVersions(Long examId);
 }

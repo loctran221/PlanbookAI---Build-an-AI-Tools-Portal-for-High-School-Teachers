@@ -93,7 +93,71 @@ const contentApproval = [
   },
 ];
 
+import { useState, useEffect } from "react";
+import { api } from "../lib/auth";
+
 export default function ManagerDashboard() {
+  const [pendingContents, setPendingContents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPending();
+  }, []);
+
+  const fetchPending = async () => {
+    try {
+      const res: any = await api.get("/api/manager/pending-contents");
+      const formatted: any[] = [];
+      
+      if (res.pendingQuestions) {
+        res.pendingQuestions.forEach((q: any) => {
+          formatted.push({
+            id: q.questionId,
+            title: "Question: " + (q.content ? q.content.substring(0, 50) + "..." : "Untitled"),
+            submitter: q.createdBy?.fullName || q.createdBy?.email || "Unknown",
+            type: "QUESTION",
+            status: q.status || "PENDING",
+            date: new Date(q.createdAt).toLocaleDateString(),
+          });
+        });
+      }
+
+      if (res.pendingTemplates) {
+        res.pendingTemplates.forEach((t: any) => {
+          formatted.push({
+            id: t.lessonPlanTemplateId || t.templateId || t.id,
+            title: t.title || "Lesson Plan Template",
+            submitter: t.createdBy?.fullName || t.createdBy?.email || "Unknown",
+            type: "LESSON_PLAN",
+            status: t.status || "PENDING",
+            date: new Date(t.createdAt).toLocaleDateString(),
+          });
+        });
+      }
+      
+      setPendingContents(formatted);
+    } catch (err) {
+      console.error("Failed to fetch pending contents", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveReject = async (id: number, type: string, isApprove: boolean) => {
+    try {
+      await api.post("/api/approvals", {
+        contentId: id,
+        contentType: type,
+        status: isApprove ? "APPROVED" : "REJECTED",
+        comment: isApprove ? "Approved by Manager" : "Rejected by Manager"
+      });
+      // Remove from list
+      setPendingContents(prev => prev.filter(item => !(item.id === id && item.type === type)));
+    } catch (err: any) {
+      alert("Lỗi khi duyệt bài: " + err.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -126,12 +190,63 @@ export default function ManagerDashboard() {
         />
         <StatCard
           title="Approval Queue"
-          value="2"
+          value={pendingContents.length.toString()}
           icon={Clock}
           description="Content pending review"
         />
       </div>
 
+      {/* Content Approval Queue */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Content Approval Queue</CardTitle>
+          <CardDescription>Items pending your review</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-gray-500 text-sm">Đang tải dữ liệu...</p>
+          ) : pendingContents.length === 0 ? (
+            <p className="text-gray-500 text-sm">Hiện tại không có bài nào cần duyệt.</p>
+          ) : (
+            <div className="space-y-4">
+              {pendingContents.map((item, idx) => (
+                <div
+                  key={`${item.type}-${item.id}-${idx}`}
+                  className="flex items-center justify-between p-4 rounded-lg border bg-white"
+                >
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <span>Bởi: {item.submitter}</span>
+                      <Badge variant="outline">{item.type}</Badge>
+                      <span>{item.date}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleApproveReject(item.id, item.type, false)}
+                    >
+                      Từ chối
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => handleApproveReject(item.id, item.type, true)}
+                    >
+                      <CheckCircle className="mr-1 h-4 w-4" />
+                      Duyệt
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
       {/* Subscription Plans Overview */}
       <Card>
         <CardHeader>
@@ -237,51 +352,6 @@ export default function ManagerDashboard() {
         </CardContent>
       </Card>
 
-      {/* Content Approval Queue */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Content Approval Queue</CardTitle>
-          <CardDescription>Items pending your review</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {contentApproval.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between p-4 rounded-lg border bg-white"
-              >
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span>By {item.submitter}</span>
-                    <Badge variant="outline">{item.type}</Badge>
-                    <span>{item.items} items</span>
-                    <span>{item.date}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {item.status === "Pending" ? (
-                    <>
-                      <Button variant="outline" size="sm" className="text-red-600">
-                        Reject
-                      </Button>
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                        <CheckCircle className="mr-1 h-4 w-4" />
-                        Approve
-                      </Button>
-                    </>
-                  ) : (
-                    <Badge className="bg-green-50 text-green-700">
-                      <CheckCircle className="mr-1 h-3 w-3" />
-                      Approved
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

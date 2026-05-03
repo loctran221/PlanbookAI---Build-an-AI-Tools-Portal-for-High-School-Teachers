@@ -1,0 +1,8 @@
+# Trực diện các thư mục nặng
+FE/node_modules/
+FE/.vite/
+FE/dist/
+BE/backend/target/
+BE/backend/.idea/
+.idea/
+.env

@@ -1,50 +1,66 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Outlet } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import ExerciseGenerator from "./pages/ExerciseGenerator";
 import OCRGrading from "./pages/OCRGrading";
-import DashboardLayout from "./components/DashboardLayout"; // ĐÃ SỬA: Dùng ./ thay vì ../
+import DashboardLayout from "./components/DashboardLayout";
 import GenericManager from "./pages/GenericManager";
+import RouteErrorPage from "./pages/RouteErrorPage";
+
+// Dashboards
+import AdminDashboard from "./pages/AdminDashboard";
+import ManagerDashboard from "./pages/ManagerDashboard";
+import TeacherDashboard from "./pages/TeacherDashboard";
+import StaffDashboard from "./pages/StaffDashboard";
+import ClassManager from "./pages/ClassManager";
+import ExamGenerator from "./pages/ExamGenerator";
+import Workspace from "./pages/Workspace";
+import QuestionBank from "./pages/QuestionBank";
+import Analytics from "./pages/Analytics";
 
 export const router = createBrowserRouter([
   {
-    path: "/",
-    element: <LoginPage />,
-  },
-  {
-    path: "/login",
-    element: <LoginPage />,
-  },
+    element: <Outlet />,
+    errorElement: <RouteErrorPage />,
+    children: [
+      { index: true, element: <LoginPage /> },
+      { path: "login", element: <LoginPage /> },
   {
     path: "/teacher",
     element: <DashboardLayout />,
     children: [
-      { index: true, element: <GenericManager title="Dashboard Thống kê" endpoint="/dashboard" /> },
-      { path: "question-bank", element: <GenericManager title="Ngân hàng câu hỏi" endpoint="/questions" /> },
+      { index: true, element: <TeacherDashboard /> },
+      { path: "workspace", element: <Workspace /> },
+      { path: "classes", element: <ClassManager /> },
+      { path: "question-bank", element: <QuestionBank /> },
       { path: "exercise-generator", element: <ExerciseGenerator /> },
-      { path: "exam-generator", element: <GenericManager title="Quản lý đề thi" endpoint="/teacher-exams" /> },
+      { path: "exam-generator", element: <ExamGenerator /> },
       { path: "ocr-grading", element: <OCRGrading /> },
-      { path: "analytics", element: <GenericManager title="Phân tích dữ liệu" endpoint="/teacher-analytics" /> },
+      { path: "analytics", element: <Analytics /> },
     ],
   },
   {
     path: "/admin",
     element: <DashboardLayout />,
     children: [
-      { index: true, element: <GenericManager title="Quản trị User (Admin)" endpoint="/admin-users" /> },
+      { index: true, element: <AdminDashboard /> },
     ],
   },
   {
     path: "/manager",
     element: <DashboardLayout />,
     children: [
-      { index: true, element: <GenericManager title="Quản lý Đơn hàng" endpoint="/manager-orders" /> },
+      { index: true, element: <ManagerDashboard /> },
     ],
   },
   {
     path: "/staff",
     element: <DashboardLayout />,
     children: [
-      { index: true, element: <GenericManager title="Quản lý Prompt Staff" endpoint="/prompt-staff" /> },
+      { index: true, element: <StaffDashboard /> },
+      { path: "prompts", element: <GenericManager title="Quản lý Prompt Staff" endpoint="/prompt-staff" /> },
+    ],
+  },
+      { path: "*", element: <LoginPage /> },
     ],
   },
 ]);

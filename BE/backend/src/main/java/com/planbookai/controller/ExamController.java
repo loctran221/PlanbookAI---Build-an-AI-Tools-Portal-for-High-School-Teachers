@@ -41,4 +41,17 @@ public class ExamController {
         examService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/versions/generate")
+    public ResponseEntity<List<com.planbookai.dto.exam.ExamVersionDTO>> generateVersions(
+            @PathVariable @NonNull Long id,
+            @RequestParam(defaultValue = "4") int count) {
+        return ResponseEntity.ok(examService.generateVersions(id, count));
+    }
+
+    @GetMapping("/{id}/versions")
+    public ResponseEntity<List<com.planbookai.dto.exam.ExamVersionDTO>> getVersions(
+            @PathVariable @NonNull Long id) {
+        return ResponseEntity.ok(examService.getVersions(id));
+    }
 }
